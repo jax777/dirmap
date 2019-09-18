@@ -424,6 +424,13 @@ def scanModeHandler():
         outputscreen.error("[-] You have to select at least one mode , plz check mode config")
         sys.exit()
 
+def getBrief(html_doc):
+    try:
+        html = etree.HTML(html_doc)
+        title = html.xpath("/html/head/title/text()")
+        return title[0].strip().replace("]","*")
+    except:
+        return html_doc[:200].replace("]","*")
 def responseHandler(response):
     '''
     @description: 处理响应结果
@@ -438,7 +445,7 @@ def responseHandler(response):
     #跳过大小为skip_size的页面
     if size == conf.skip_size:
         return
-
+    
     #自动识别404-判断是否与获取404页面特征匹配
     if conf.auto_check_404_page:
         if hashlib.md5(response.content).hexdigest() in conf.autodiscriminator_md5:
@@ -451,6 +458,7 @@ def responseHandler(response):
             msg += '[{}]'.format(response.headers.get('content-type'))
         if conf.response_size:
             msg += '[{}] '.format(str(size))
+        msg += '[{}] '.format(getBrief(response.text))
         msg += response.url
         outputscreen.info('\r'+msg+' '*(th.console_width-len(msg)+1))
         #已去重复，结果保存。NOTE:此处使用response.url进行文件名构造，解决使用-iL参数时，不能按照域名来命名文件名的问题
