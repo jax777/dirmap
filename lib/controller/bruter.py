@@ -16,6 +16,7 @@ import re
 import sys
 import time
 import urllib
+import base64
 
 import gevent
 import progressbar
@@ -428,9 +429,9 @@ def getBrief(html_doc):
     try:
         html = etree.HTML(html_doc)
         title = html.xpath("/html/head/title/text()")
-        return title[0].strip().replace("]","*")
+        return str(base64.b64encode(title[0].strip().encode("utf-8")),'utf-8')
     except:
-        return html_doc[:200].replace("]","*")
+        return str(base64.b64encode(html_doc[:200]),'utf-8')
 def responseHandler(response):
     '''
     @description: 处理响应结果
@@ -457,8 +458,8 @@ def responseHandler(response):
         if conf.response_header_content_type:
             msg += '[{}]'.format(response.headers.get('content-type'))
         if conf.response_size:
-            msg += '[{}] '.format(str(size))
-        msg += '[{}] '.format(getBrief(response.text))
+            msg += '[{}]'.format(str(size))
+        msg += '[{}] '.format(getBrief(response.content))
         msg += response.url
         outputscreen.info('\r'+msg+' '*(th.console_width-len(msg)+1))
         #已去重复，结果保存。NOTE:此处使用response.url进行文件名构造，解决使用-iL参数时，不能按照域名来命名文件名的问题
