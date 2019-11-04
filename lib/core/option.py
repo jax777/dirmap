@@ -69,6 +69,7 @@ def TargetRegister(args):
     # 用户输入入队
     if args.target_input:
         # 尝试解析目标地址
+        conf.request_headers = "Host="+args.target_host
         try:
             lists=parseTarget(args.target_input)
         except:

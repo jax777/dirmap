@@ -28,6 +28,8 @@ def cmdLineParser():
                         help="scan a target or network (e.g. [http://]target.com , 192.168.1.1[/24] , 192.168.1.1-192.168.1.100)")
     target.add_argument("-iF", metavar="FILE", dest="target_file", type=str, default="",
                         help="load targets from targetFile (e.g. urls.txt)")
+    target.add_argument("-host", metavar="HOST", dest="target_host", type=str, default="",
+                        help="target host header e.g. : www.baidu.com www.qq.com")
 
     # bruter
     bruter = parser.add_argument_group("Bruter", "Bruter config")
