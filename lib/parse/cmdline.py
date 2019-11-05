@@ -30,6 +30,8 @@ def cmdLineParser():
                         help="load targets from targetFile (e.g. urls.txt)")
     target.add_argument("-host", metavar="HOST", dest="target_host", type=str, default="",
                         help="target host header e.g. : www.baidu.com www.qq.com")
+    target.add_argument("-file", metavar="FILE", dest="target_file", type=str, default="",
+                        help="result filename eg. scayuhjcoaiwufnkj.result")
 
     # bruter
     bruter = parser.add_argument_group("Bruter", "Bruter config")

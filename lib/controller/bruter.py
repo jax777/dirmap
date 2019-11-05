@@ -54,15 +54,19 @@ tasks.crawl_task = Queue()
 #假性404页面md5列表
 conf.autodiscriminator_md5 = set()
 
+content_hash_dic = {}
+
 bar.log = progressbar.ProgressBar()
 
-def saveResults(domain,msg):
+#def saveResults(domain,msg):
+def saveResults(msg):
     '''
     @description: 结果保存，以"域名.txt"命名，url去重复
     @param {domain:域名,msg:保存的信息}
     @return: null
     '''
-    filename = domain +'.txt'
+    #filename = domain +'.txt'
+    filename = conf.target_file
     conf.output_path = os.path.join(paths.OUTPUT_PATH, filename)
     #判断文件是否存在，若不存在则创建该文件
     if not os.path.exists(conf.output_path):
@@ -448,9 +452,17 @@ def responseHandler(response):
         return
     
     #自动识别404-判断是否与获取404页面特征匹配
+    hashcontent = hashlib.md5(response.content).hexdigest()
     if conf.auto_check_404_page:
-        if hashlib.md5(response.content).hexdigest() in conf.autodiscriminator_md5:
+        if hashcontent in conf.autodiscriminator_md5:
             return
+    if hashcontent in content_hash_dic:
+        if content_hash_dic[hashcontent] >= 3:
+            return
+        else:
+            content_hash_dic[hashcontent] = content_hash_dic[hashcontent]+1
+    else:
+        content_hash_dic[hashcontent] = 1
 
     #自定义状态码显示
     if response.status_code in conf.response_status_code:
@@ -464,7 +476,8 @@ def responseHandler(response):
         outputscreen.info('\r'+msg+' '*(th.console_width-len(msg)+1))
         #已去重复，结果保存。NOTE:此处使用response.url进行文件名构造，解决使用-iL参数时，不能按照域名来命名文件名的问题
         #使用replace()，替换`:`，修复window下不能创建有`:`的文件问题
-        saveResults(urllib.parse.urlparse(response.url).netloc.replace(':','_'),msg)
+        #saveResultssaveResults(urllib.parse.urlparse(response.url).netloc.replace(':','_'),msg)
+        saveResults(msg)
     #关于递归扫描。响应在自定义状态码中时，添加判断是否进行递归扫描
     if response.status_code in conf.recursive_status_code:
         if conf.recursive_scan:

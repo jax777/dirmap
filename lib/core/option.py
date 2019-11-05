@@ -70,6 +70,7 @@ def TargetRegister(args):
     if args.target_input:
         # 尝试解析目标地址
         conf.request_headers = "Host="+args.target_host
+        conf.target_file = args.target_file
         try:
             lists=parseTarget(args.target_input)
         except:
