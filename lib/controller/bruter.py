@@ -492,16 +492,16 @@ def responseHandler(response,check404=True):
     if size == conf.skip_size:
         return
     
+    brief = getBrief(response.content)
     #自动识别404-判断是否与获取404页面特征匹配
     if check404:
         if check404Feature(response.content):
             return
-        brief = getBrief(response.content)
         if checkBriefLimit(brief):
             return
 
     #自定义状态码显示
-    if response.status_code in conf.response_status_code:
+    if response.status_code in conf.response_status_code or not check404:
         msg = '[{}]'.format(str(response.status_code))
         if conf.response_header_content_type:
             msg += '[{}]'.format(response.headers.get('content-type'))
@@ -600,11 +600,11 @@ def getIndexInfo(url):
     if conf.request_header_cookie:
         headers['Cookie'] = conf.request_header_cookie
     try:
-        response = requests.request(conf.request_method, payloads.current_payload, headers=headers, timeout=conf.request_timeout, verify=False, allow_redirects=True, proxies=conf.proxy_server)
+        response = requests.request(conf.request_method, url, headers=headers, timeout=conf.request_timeout, verify=False, allow_redirects=True, proxies=conf.proxy_server)
         #3进入结果处理流程
         responseHandler(response,False)
     except requests.exceptions.Timeout as e:
-        #outputscreen.error('[x] timeout! url:{}'.format(payloads.current_payload))
+        #outputscreen.error('[x] timeout! url:{}'.format(url))
         pass
     except Exception as e:
         # outputscreen.error('[x] error:{}'.format(e))
