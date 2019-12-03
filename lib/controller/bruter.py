@@ -17,6 +17,7 @@ import sys
 import time
 import urllib
 import base64
+import json
 
 import gevent
 import progressbar
@@ -54,7 +55,9 @@ tasks.crawl_task = Queue()
 #假性404页面md5列表
 conf.autodiscriminator_md5 = set()
 
+# 限制相同页面保存
 content_hash_dic = {}
+brief_dic = {}
 
 bar.log = progressbar.ProgressBar()
 
@@ -436,7 +439,45 @@ def getBrief(html_doc):
         return str(base64.b64encode(title[0].strip().encode("utf-8")),'utf-8')
     except:
         return str(base64.b64encode(html_doc[:200]),'utf-8')
-def responseHandler(response):
+
+def check404Feature(html_doc):
+
+    hashcontent = hashlib.md5(html_doc).hexdigest()
+    if conf.auto_check_404_page:
+        if hashcontent in conf.autodiscriminator_md5:
+            return True
+    if hashcontent in content_hash_dic:
+        if content_hash_dic[hashcontent] >= 2:
+            return True
+        else:
+            content_hash_dic[hashcontent] = content_hash_dic[hashcontent]+1
+    else:
+        content_hash_dic[hashcontent] = 1
+
+
+    if len(html_doc) > 500:
+        return False
+    try:
+        json.loads(html_doc)
+        if 'err' in html_doc or 'limit' in html_doc:
+            return True
+        else:
+            return False
+    except:
+        return False
+
+    
+def checkBriefLimit(brief):
+    if brief in brief_dic:
+        if brief_dic[brief] >= 2:
+            return True
+        else:
+            brief_dic[brief] = brief_dic[brief]+1
+    else:
+        brief_dic[brief] = 1
+    return False
+
+def responseHandler(response,check404=True):
     '''
     @description: 处理响应结果
     @param {type}
@@ -452,17 +493,12 @@ def responseHandler(response):
         return
     
     #自动识别404-判断是否与获取404页面特征匹配
-    hashcontent = hashlib.md5(response.content).hexdigest()
-    if conf.auto_check_404_page:
-        if hashcontent in conf.autodiscriminator_md5:
+    if check404:
+        if check404Feature(response.content):
             return
-    if hashcontent in content_hash_dic:
-        if content_hash_dic[hashcontent] >= 3:
+        brief = getBrief(response.content)
+        if checkBriefLimit(brief):
             return
-        else:
-            content_hash_dic[hashcontent] = content_hash_dic[hashcontent]+1
-    else:
-        content_hash_dic[hashcontent] = 1
 
     #自定义状态码显示
     if response.status_code in conf.response_status_code:
@@ -471,7 +507,7 @@ def responseHandler(response):
             msg += '[{}]'.format(response.headers.get('content-type'))
         if conf.response_size:
             msg += '[{}]'.format(str(size))
-        msg += '[{}] '.format(getBrief(response.content))
+        msg += '[{}] '.format(brief)
         msg += response.url
         outputscreen.info('\r'+msg+' '*(th.console_width-len(msg)+1))
         #已去重复，结果保存。NOTE:此处使用response.url进行文件名构造，解决使用-iL参数时，不能按照域名来命名文件名的问题
@@ -545,6 +581,35 @@ def boss():
     while not tasks.all_task.empty():
         worker()
 
+def getIndexInfo(url):
+    #自定义header
+    headers = {}
+    if conf.request_headers:
+        try:
+            for header in conf.request_headers.split(','):
+                k, v = header.split('=')
+                #print(k,v)
+                headers[k] = v
+        except Exception as e:
+            outputscreen.error("[x] Check personalized headers format: header=value,header=value.\n[x] error:{}".format(e))
+            sys.exit()
+    #自定义ua
+    if conf.request_header_ua:
+        headers['User-Agent'] = conf.request_header_ua
+    #自定义cookie
+    if conf.request_header_cookie:
+        headers['Cookie'] = conf.request_header_cookie
+    try:
+        response = requests.request(conf.request_method, payloads.current_payload, headers=headers, timeout=conf.request_timeout, verify=False, allow_redirects=True, proxies=conf.proxy_server)
+        #3进入结果处理流程
+        responseHandler(response,False)
+    except requests.exceptions.Timeout as e:
+        #outputscreen.error('[x] timeout! url:{}'.format(payloads.current_payload))
+        pass
+    except Exception as e:
+        # outputscreen.error('[x] error:{}'.format(e))
+        pass
+
 def bruter(url):
     '''
     @description: 扫描插件入口函数
@@ -558,11 +623,14 @@ def bruter(url):
     if conf.parsed_url.scheme != 'http' and conf.parsed_url.scheme != 'https':
         url = 'http://' + url
         conf.parsed_url = urllib.parse.urlparse(url)
+    
     #全局target的url，给crawl、fuzz模块使用。XXX:要放在填补url之前，否则fuzz模式会出现这样的问题：https://target.com/phpinfo.{dir}/
     conf.url = url
     #填补url后的/
     if not url.endswith('/'):
         url = url + '/'
+
+    getIndexInfo(url)
 
     #打印当前target
     msg = '[+] Current target: {}'.format(url)
