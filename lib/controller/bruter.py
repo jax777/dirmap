@@ -441,7 +441,7 @@ def getBrief(html_doc):
         return str(base64.b64encode(html_doc[:200]),'utf-8')
 
 def check404Feature(html_doc):
-    html_doc = html_doc.lower()ß
+    html_doc = html_doc.lower()
     hashcontent = hashlib.md5(html_doc).hexdigest()
     if conf.auto_check_404_page:
         if hashcontent in conf.autodiscriminator_md5:
