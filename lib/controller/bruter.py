@@ -492,10 +492,10 @@ def responseHandler(response,check404=True):
     if size == conf.skip_size:
         return
     
-    brief = getBrief(response.content)
+    brief = getBrief(response.text)
     #自动识别404-判断是否与获取404页面特征匹配
     if check404:
-        if check404Feature(response.content):
+        if check404Feature(response.text):
             return
         if checkBriefLimit(brief):
             return
